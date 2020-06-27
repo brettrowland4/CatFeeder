@@ -1,7 +1,11 @@
 # CatFeeder
 
-Keras version: 2.1.5
-Tensorflow version: 1.13.1 
+Keras version: 2.1.5 (included in tf)
+
+Tensorflow version: 2.2.0
+
 OpenCV version: 4.3.0
-Scipy version: 1.5.0
-h5py version: 2.1.0
+
+Scipy version: 1.4.1
+
+h5py version: 2.10.0
