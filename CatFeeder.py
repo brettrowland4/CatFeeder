@@ -9,6 +9,9 @@ import cv2
 import os
 import RPi.GPIO as GPIO
 
+
+
+
 # define the paths to the Not Santa Keras deep learning model and
 # audio file
 MODEL_PATH = "cat_detector.model"
@@ -20,6 +23,9 @@ TOTAL_THRESH = 20
 # initialize is the santa alarm has been triggered
 SANTA = False
 
+WilsonFoodOpen = False
+OwenFoodOpen = False
+
 # initialize the servo
 servoPIN = 17
 GPIO.setmode(GPIO.BCM)
@@ -29,29 +35,27 @@ GPIO.setup(servoPIN, GPIO.OUT)
 p = GPIO.PWM(servoPIN, 50)
 
 # Test
-p.start(2.5)
+p.start(0)
 
-try:
-  while True:
+def open_wilson_food():
     p.ChangeDutyCycle(5)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(7.5)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(10)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(12.5)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(10)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(7.5)
-    time.sleep(0.5)
+    time.sleep(1)
+    p.ChangeDutyCycle(0)
+
+def close_wilson_food():
+    p.ChangeDutyCycle(90)
+    time.sleep(1)
+    p.ChangeDutyCycle(0)
+
+def open_owen_food():
+    p.ChangeDutyCycle(90)
+    time.sleep(1)
+    p.ChangeDutyCycle(0)
+
+def close_owen_food():
     p.ChangeDutyCycle(5)
-    time.sleep(0.5)
-    p.ChangeDutyCycle(2.5)
-    time.sleep(0.5)
-except KeyboardInterrupt:
-  p.stop()
-  GPIO.cleanup()
+    time.sleep(1)
+    p.ChangeDutyCycle(0)
 
 # load the model
 print("[INFO] loading model...")
@@ -88,6 +92,7 @@ while True:
         proba = wilson
         TOTAL_CONSEC_WILSON += 1
         TOTAL_CONSEC_OWEN = 0
+
     elif (owen >= wilson) and (owen >= nothing):
         label = "Owen"
         proba = owen
@@ -98,6 +103,22 @@ while True:
         proba = nothing
         TOTAL_CONSEC_WILSON = 0;
         TOTAL_CONSEC_OWEN = 0;
+
+    if(TOTAL_CONSEC_WILSON > TOTAL_THRESH):
+        if(WilsonFoodOpen == False):
+            open_wilson_food()
+            WilsonFoodOpen = True
+    elif(WilsonFoodOpen == True):
+        close_wilson_food()
+        WilsonFoodOpen = False
+
+    if(TOTAL_CONSEC_OWEN > TOTAL_THRESH):
+        if(OwenFoodOpen == False):
+            open_owen_food()
+            OwenFoodOpen = True
+    elif(OwenFoodOpen == True):
+        close_owen_food()
+        OwenFoodOpen = False
 
     # build the label and draw it on the frame
     label = "{}: {:.2f}%".format(label, proba * 100)
@@ -111,6 +132,8 @@ while True:
     if key == ord("q"):
         break
 # do a bit of cleanup
+p.stop()
+GPIO.cleanup()
 print("[INFO] cleaning up...")
 cv2.destroyAllWindows()
 vs.stop()
