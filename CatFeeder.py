@@ -113,7 +113,6 @@ while True:
         if(OwenFoodOpen == True):
             close_owen_food()
             OwenFoodOpen = False
-            wait(1)
         if(WilsonFoodOpen == False):
             open_wilson_food()
             WilsonFoodOpen = True
@@ -127,7 +126,6 @@ while True:
         if(WilsonFoodOpen == True):
             close_wilson_food()
             WilsonFoodOpen = False
-            wait(1)
         if(OwenFoodOpen == False):
             open_owen_food()
             OwenFoodOpen = True
