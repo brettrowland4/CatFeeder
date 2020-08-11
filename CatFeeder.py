@@ -19,7 +19,8 @@ MODEL_PATH = "cat_detector.model"
 # santa along with threshold required to trigger the santa alarm
 TOTAL_CONSEC_WILSON = 0
 TOTAL_CONSEC_OWEN = 0
-TOTAL_THRESH = 20
+TOTAL_CONSEC_NOTHING = 0
+TOTAL_THRESH = 30
 # initialize is the santa alarm has been triggered
 SANTA = False
 
@@ -28,8 +29,10 @@ OwenFoodOpen = False
 
 # initialize the servo
 servoPIN = 17
+lightGatePIN = 27
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(servoPIN, GPIO.OUT)
+GPIO.setup(lightGatePIN, GPIO.IN)
 
 # configure GPIO17 for pwm with 50hz 
 p = GPIO.PWM(servoPIN, 50)
@@ -37,25 +40,63 @@ p = GPIO.PWM(servoPIN, 50)
 # Test
 p.start(0)
 
+def run_motor_until_break(direction):
+    LightGateCount = 0
+
+    input = GPIO.input(lightGatePIN)
+    #time.sleep(.2)
+    if(input == 0):
+        count = count + 1
+        if( count > 3):
+            #we have stopped on a target
+            p.ChangeDutyCycle(0)
+
+            #sleep longer for first time stopping
+            if(count >= 6):
+                #time.sleep(1)
+                complete = True
+
+            count = count + 1
+
+            #print("nothing")
+            time.sleep(.01)
+
+    elif(input == 1):
+        count = 0
+        p.ChangeDutyCycle(direction)
+        #time.sleep(.2)
+        #p.ChangeDutyCycle(0)
+
+
 def open_wilson_food():
+    #initialize movement
     p.ChangeDutyCycle(5)
-    time.sleep(1)
+    time.sleep(.1)
     p.ChangeDutyCycle(0)
+
+    #run motor until light is broken
+    run_motor_until_break(5)
 
 def close_wilson_food():
     p.ChangeDutyCycle(90)
-    time.sleep(1)
+    time.sleep(.1)
     p.ChangeDutyCycle(0)
+
+    run_motor_until_break(90)
 
 def open_owen_food():
     p.ChangeDutyCycle(90)
-    time.sleep(1)
+    time.sleep(.1)
     p.ChangeDutyCycle(0)
+
+    run_motor_until_break(90)
 
 def close_owen_food():
     p.ChangeDutyCycle(5)
-    time.sleep(1)
+    time.sleep(.1)
     p.ChangeDutyCycle(0)
+
+    run_motor_until_break(5)
 
 # load the model
 print("[INFO] loading model...")
@@ -87,38 +128,59 @@ while True:
 
     # check to see if santa was detected using our convolutional
     # neural network
-    if (wilson >= owen) and (wilson >= nothing):
+    if (wilson >= owen) and (wilson >= nothing) and (wilson >= .9):
         label = "Wilson"
         proba = wilson
         TOTAL_CONSEC_WILSON += 1
         TOTAL_CONSEC_OWEN = 0
+        TOTAL_CONSEC_NOTHING = 0
 
-    elif (owen >= wilson) and (owen >= nothing):
+    elif (owen >= wilson) and (owen >= nothing) and (owen >= .9):
         label = "Owen"
         proba = owen
         TOTAL_CONSEC_WILSON = 0
         TOTAL_CONSEC_OWEN += 1
+        TOTAL_CONSEC_NOTHING = 0
+        
     else:
         label = "Nothing"
         proba = nothing
-        TOTAL_CONSEC_WILSON = 0;
-        TOTAL_CONSEC_OWEN = 0;
+        TOTAL_CONSEC_WILSON = 0
+        TOTAL_CONSEC_OWEN = 0
+        TOTAL_CONSEC_NOTHING += 1
 
     if(TOTAL_CONSEC_WILSON > TOTAL_THRESH):
+        if(OwenFoodOpen == True):
+            close_owen_food()
+            OwenFoodOpen = False
         if(WilsonFoodOpen == False):
             open_wilson_food()
             WilsonFoodOpen = True
+            
     elif(WilsonFoodOpen == True):
-        close_wilson_food()
-        WilsonFoodOpen = False
+        if(TOTAL_CONSEC_NOTHING > TOTAL_THRESH):
+            close_wilson_food()
+            WilsonFoodOpen = False
 
     if(TOTAL_CONSEC_OWEN > TOTAL_THRESH):
+        if(WilsonFoodOpen == True):
+            close_wilson_food()
+            WilsonFoodOpen = False
         if(OwenFoodOpen == False):
             open_owen_food()
             OwenFoodOpen = True
     elif(OwenFoodOpen == True):
-        close_owen_food()
-        OwenFoodOpen = False
+        if(TOTAL_CONSEC_NOTHING > TOTAL_THRESH):
+            close_owen_food()
+            OwenFoodOpen = False
+        
+    #if(TOTAL_CONSEC_NOTHING > TOTAL_THRESH):
+    #    if(OwenFoodOpen == True):
+    #        close_owen_food()
+    #        OwenFoodOpen = False
+    #    if(WilsonFoodOpen == True):
+    #        close_wilson_food()
+    #        WilsonFoodOpen = False
 
     # build the label and draw it on the frame
     label = "{}: {:.2f}%".format(label, proba * 100)
@@ -127,7 +189,7 @@ while True:
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
- 
+    print("%r Owen, %r Wilson", OwenFoodOpen, WilsonFoodOpen)
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
