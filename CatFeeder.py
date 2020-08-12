@@ -40,60 +40,81 @@ p = GPIO.PWM(servoPIN, 50)
 # Test
 p.start(0)
 
-def run_motor_until_break(direction):
-    LightGateCount = 0
-
+def run_motor_until_break(duration):
+    count = 0
+    complete = False
+    notmoved = True
+    stuckcount = 0
     input = GPIO.input(lightGatePIN)
-    #time.sleep(.2)
-    if(input == 0):
-        count = count + 1
-        if( count > 3):
-            #we have stopped on a target
-            p.ChangeDutyCycle(0)
 
-            #sleep longer for first time stopping
-            if(count >= 6):
-                #time.sleep(1)
-                complete = True
+    #Check if the motor has moved since start, if not cat is standing on it
+    while(notmoved == True):
+        input = GPIO.input(lightGatePIN)
+        if(input == 0):
+           #run the motor forward
+            stuckcount = stuckcount + 1
 
-            count = count + 1
+            if(stuckcount > 100):
+                print("stuck")
+                p.ChangeDutyCycle(duration)
+                time.sleep(.2)
+                p.ChangeDutyCycle(0)
+        else:
+            notmoved = False
 
-            #print("nothing")
-            time.sleep(.01)
-
-    elif(input == 1):
-        count = 0
-        p.ChangeDutyCycle(direction)
+    while( complete == False):
+        input = GPIO.input(lightGatePIN)
         #time.sleep(.2)
-        #p.ChangeDutyCycle(0)
+        if(input == 0):
+            count = count + 1
+            if( count > 3):
+                #we have stopped on a target
+                p.ChangeDutyCycle(0)
+
+                #sleep longer for first time stopping
+                if(count > 100):
+                    #time.sleep(1)
+                    print(count)
+                    complete = True
+
+                #count = count + 1
+
+                #print("nothing")
+                time.sleep(.001)
+
+        elif(input == 1):
+            count = 0
+            p.ChangeDutyCycle(duration)
+            #time.sleep(.2)
+            #p.ChangeDutyCycle(0)
 
 
 def open_wilson_food():
     #initialize movement
     p.ChangeDutyCycle(5)
-    time.sleep(.1)
+    time.sleep(.5)
     p.ChangeDutyCycle(0)
 
     #run motor until light is broken
     run_motor_until_break(5)
 
 def close_wilson_food():
-    p.ChangeDutyCycle(90)
-    time.sleep(.1)
+    p.ChangeDutyCycle(99)
+    time.sleep(.5)
     p.ChangeDutyCycle(0)
 
-    run_motor_until_break(90)
+    run_motor_until_break(99)
 
 def open_owen_food():
-    p.ChangeDutyCycle(90)
-    time.sleep(.1)
+    p.ChangeDutyCycle(99)
+    time.sleep(.5)
     p.ChangeDutyCycle(0)
 
-    run_motor_until_break(90)
+    run_motor_until_break(99)
 
 def close_owen_food():
     p.ChangeDutyCycle(5)
-    time.sleep(.1)
+    time.sleep(.5)
     p.ChangeDutyCycle(0)
 
     run_motor_until_break(5)
@@ -189,7 +210,7 @@ while True:
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
-    print("%r Owen, %r Wilson", OwenFoodOpen, WilsonFoodOpen)
+    #print("%r Owen, %r Wilson", OwenFoodOpen, WilsonFoodOpen)
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
