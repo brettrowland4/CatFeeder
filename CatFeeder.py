@@ -83,120 +83,25 @@ WilsonFoodOpen = False
 OwenFoodOpen = False
 
 # initialize the servo
-servoPIN = 17
-lightGatePIN = 27
+#servoPIN = 17
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(servoPIN, GPIO.OUT)
-GPIO.setup(lightGatePIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+#GPIO.setup(servoPIN, GPIO.OUT)
 
 # configure GPIO17 for pwm with 50hz 
-p = GPIO.PWM(servoPIN, 50)
-
-# Test
-p.start(0)
 
 #configure angle measurements
 current_angle = 180
 new_angle = 180
 angleDiff = 20
 
-def SetAngle(angle):
-	duty = angle / 18 + 2
-	GPIO.output(servoPIN, True)
-	p.ChangeDutyCycle(duty)
-	sleep(.1)
-	GPIO.output(servoPIN, False)
-	p.ChangeDutyCycle(0)
-
-def run_motor_until_break(duration):
-    count = 0
-    complete = False
-    notmoved = True
-    stuckcount = 0
-    input = GPIO.input(lightGatePIN)
-    
-    #Check if the motor has moved since start, if not cat is standing on it
-    while(notmoved == True):
-        input = GPIO.input(lightGatePIN)
-        testcount = 0
-        for x in range(1000):
-            testcount = testcount + GPIO.input(lightGatePIN)
-
-        print(testcount)
-
-        if(testcount < 500):
-           #run the motor forward
-            #stuckcount = stuckcount + 1
-
-           # if(stuckcount > 1000):
-            print("stuck")
-            p.ChangeDutyCycle(duration)
-            time.sleep(.5)
-            p.ChangeDutyCycle(0)
-        else:
-            notmoved = False
-
-    while( complete == False):
-        input = GPIO.input(lightGatePIN)
-        #time.sleep(.2)
-        if(input == 0):
-            count = count + 1
-            if( count > 3):
-                #we have stopped on a target
-                p.ChangeDutyCycle(0)
-
-                #sleep longer for first time stopping
-                if(count > 100):
-                    #time.sleep(1)
-                    print(count)
-                    complete = True
-
-                #count = count + 1
-
-                #print("nothing")
-                time.sleep(.0001)
-
-        elif(input == 1):
-            count = 0
-            p.ChangeDutyCycle(duration)
-            time.sleep(.001)
-            p.ChangeDutyCycle(0)
-
 def open_owen_food():
     global current_angle
-    new_angle = 105
-    if(new_angle < current_angle):
-        updated_angle = current_angle
-        while(updated_angle > new_angle):
-            updated_angle = updated_angle - angleDiff
-            SetAngle(updated_angle - angleDiff)
-    else:
-        updated_angle = current_angle
-        while(updated_angle < new_angle):
-            updated_angle = updated_angle + angleDiff
-            SetAngle(updated_angle + angleDiff)
-    current_angle = 105
-    SetAngle(current_angle)
 
 def open_wilson_food():
     global current_angle
-    new_angle = 0
-    updated_angle = current_angle
-    while(updated_angle > new_angle):
-        updated_angle = updated_angle - angleDiff
-        SetAngle(updated_angle - angleDiff)
-    current_angle = 0
-    SetAngle(current_angle)
 
 def close_food():
     global current_angle
-    new_angle = 180
-    updated_angle = current_angle
-    while(updated_angle < new_angle):
-        updated_angle = updated_angle + angleDiff
-        SetAngle(updated_angle + angleDiff)
-    current_angle = 180
-    SetAngle(current_angle)
 
 # load the model
 print("[INFO] loading model...")
@@ -208,7 +113,7 @@ print("[INFO] starting video stream...")
 vs = VideoStream(usePiCamera=True).start()
 time.sleep(2.0)
 
-SetAngle(180)
+#SetAngle(180)
 
 # loop over the frames from the video stream
 while True:
@@ -433,8 +338,8 @@ while True:
         OwenFoodOpen = True
         WilsonFoodOpen = False
         open_owen_food()
+
 # do a bit of cleanup
-p.stop()
 GPIO.cleanup()
 print("[INFO] cleaning up...")
 cv2.destroyAllWindows()
